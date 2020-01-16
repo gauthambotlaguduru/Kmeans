@@ -3,11 +3,20 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import random
 import math
+import argparse
+
+ap = argparse.ArgumentParser()
+ap.add_argument("-n", "--path", required=True,
+	help="path to the dataset")
+args = vars(ap.parse_args())
 
 class kmeans:
 
     WssScores = []
     finalClusters = []
+
+    # Contructor..
+    # selectKmeans function is called after initialization
     
     def __init__(self, dataset, minClusters = 2, maxClusters = 5, maxIterations = 10000, tolerance = 0.01):
 
@@ -20,6 +29,8 @@ class kmeans:
         self.WssScores = []
         self.finalClusters = []
         self.data = dataset
+        self.data = self.data.drop(df.columns[0], axis=1)
+        self.data = self.data.fillna(0)
         self.df = self.data.to_numpy()
         self.r, self.c = self.df.shape
         self.kmeans = np.zeros((self.k, self.c))
@@ -27,9 +38,11 @@ class kmeans:
         self.count = np.ones((self.k, 1))
         self.selectKmeans()
 
+    # Compute if tolerance level is achieved..
     def determineTolerance(self):
         return (np.sum((self.kmeans - self.prevMeans)*(self.kmeans - self.prevMeans)) <= self.tolerance)
 
+    # WSS Score computation to choose the right cluster size..
     def computeWSS(self, c):
 
         d = []
@@ -40,7 +53,10 @@ class kmeans:
             Mat = np.repeat(M, repeats = len(r), axis = 0)
             d.append(np.sum(np.sum((self.df[r, :] - Mat)*(self.df[r, :] - Mat), axis = 1)))
         return sum(d)
-            
+
+    # For the current value of k, choose k random means to start with..
+    # call clusterPoints()
+    
     def selectKmeans(self):
 
         if self.k <= self.maxK:
@@ -52,17 +68,22 @@ class kmeans:
             self.clusterPoints()
         else:
             print('Job Done')
-        
+
+    # Construct a distance matrix -->> for every cluster, find distance between every point and the cluster mean..
+    # Based on the distance, cluster the point to the one with the smallest distance.
+    # Recompute the kmeans after storing the current values into prevMeans.
+
+    # Check for termination conditions and update state variables accordingly..
     def clusterPoints(self):
 
         meansMat = np.array([])
-        d = np.array([])
+        dm = np.array([])
         for means in self.kmeans:
             M = np.array([list(means)])
             meansMat = np.repeat(M, repeats = self.r, axis = 0)
-            d = np.append(d, np.sqrt(np.sum((self.df - meansMat)*(self.df - meansMat), axis = 1)))
-        d = d.reshape((self.k, self.r))
-        c = list(np.argwhere(d == d.min(axis = 0))[:, 0])
+            dm = np.append(d, np.sqrt(np.sum((self.df - meansMat)*(self.df - meansMat), axis = 1)))
+        dm = d.reshape((self.k, self.r))
+        c = list(np.argwhere(dm == dm.min(axis = 0))[:, 0])
         self.prevMeans = self.kmeans
         for i in range(0, self.k):
             r = list(filter(lambda x: c[x] == i, range(len(c))))
@@ -78,6 +99,7 @@ class kmeans:
             self.count = np.ones((self.k, 1))
             self.clusterPoints()
 
+    # Plot the Wss Score..
     def plotWssScores(self):
 
         x = [i for i in range(self.minClusters, self.maxK+1)]
@@ -89,9 +111,7 @@ class kmeans:
         
 def main():
 
-    df = pd.read_csv("C:\\Users\\Gautham\\Documents\\Projects\\data\\ccdata\\CC_GENERAL.csv")
-    df = df.drop(['CUST_ID'], axis = 1)
-    df = df.fillna(0)
+    df = pd.read_csv(args["path"])
     data = kmeans(df)
     data.plotWssScores()
 
